@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./Login.css";
 import { login } from "../api/authApi";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 type LoginErrors = {
   email?: string;
@@ -12,7 +13,8 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<LoginErrors>({});
-    const navigate = useNavigate();
+  const {loginUser} = useAuth();
+  const navigate = useNavigate();
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -33,7 +35,7 @@ function Login() {
     }
     try {
       const data = await login({ email: email.trim(), password })
-      localStorage.setItem("accessToken", data.token) ///
+      loginUser(data.token, data.user)
       navigate("/");
     } catch {
       setErrors({
