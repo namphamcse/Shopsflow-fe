@@ -1,8 +1,8 @@
 import { useState } from "react";
 import "./Login.css";
-import { login } from "../api/authApi";
+import { login } from "../../api/authApi";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 
 type LoginErrors = {
   email?: string;
