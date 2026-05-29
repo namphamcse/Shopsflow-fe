@@ -114,6 +114,16 @@
   background: var(--success);
 }
 
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .register-page .divider-or {
   display: flex;
   align-items: center;

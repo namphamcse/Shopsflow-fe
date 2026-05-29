@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./Login.css";
 import { login } from "../../api/authApi";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 type LoginErrors = {
@@ -13,7 +13,8 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<LoginErrors>({});
-  const {loginUser} = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { loginUser } = useAuth();
   const navigate = useNavigate();
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,13 +35,17 @@ function Login() {
       return;
     }
     try {
-      const data = await login({ email: email.trim(), password })
-      loginUser(data.token, data.user)
+      setIsSubmitting(true);
+      const data = await login({ email: email.trim(), password });
+      loginUser(data.token, data.user);
       navigate("/");
     } catch {
       setErrors({
         password: "Invalid email or password.",
       });
+    }
+    finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -71,8 +76,8 @@ function Login() {
               shopsflow
             </a>
 
-            <a
-              href="register.html"
+            <Link
+              to="/register"
               className="mono-sm muted"
               style={{
                 border: "1px solid var(--line)",
@@ -82,7 +87,7 @@ function Login() {
               }}
             >
               Create account →
-            </a>
+            </Link>
           </div>
 
           <div className="auth-form-box">
@@ -131,7 +136,9 @@ function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                {errors.password && <p className="field-error">{errors.password}</p>}
+                {errors.password && (
+                  <p className="field-error">{errors.password}</p>
+                )}
               </div>
 
               <label className="check mt-2" htmlFor="rememberMe">
@@ -148,17 +155,53 @@ function Login() {
               <button
                 type="submit"
                 className="btn btn-primary btn-lg btn-block mt-4"
+                disabled={isSubmitting}
               >
-                Sign in
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path
-                    d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                {isSubmitting ? (
+                  <>
+                    Signing in
+                    <svg
+                      className="spin-icon"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <circle
+                        cx="7"
+                        cy="7"
+                        r="5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        opacity="0.25"
+                      />
+                      <path
+                        d="M12 7a5 5 0 0 0-5-5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <path
+                        d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </>
+                )}
               </button>
 
               <div className="divider-or">
@@ -193,7 +236,7 @@ function Login() {
             </form>
 
             <p className="auth-foot">
-              New around here? <a href="register.html">Create an account →</a>
+              New around here? <Link to="/register">Create an account →</Link>
             </p>
           </div>
 
