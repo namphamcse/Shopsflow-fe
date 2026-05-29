@@ -4,6 +4,7 @@ import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
 import { ToastContainer } from "react-toastify";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   return (
@@ -12,6 +13,13 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
         </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout />}>
+            {/* protected pages go here later */}
+          </Route>
+        </Route>
+        
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

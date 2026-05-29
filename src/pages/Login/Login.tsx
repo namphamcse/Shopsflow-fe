@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./Login.css";
 import { login } from "../../api/authApi";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 type LoginErrors = {
@@ -16,6 +16,10 @@ function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { loginUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname || "/";
+  
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -38,13 +42,12 @@ function Login() {
       setIsSubmitting(true);
       const data = await login({ email: email.trim(), password });
       loginUser(data.token, data.user);
-      navigate("/");
+      navigate(from, { replace: true });
     } catch {
       setErrors({
         password: "Invalid email or password.",
       });
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -186,12 +189,7 @@ function Login() {
                 ) : (
                   <>
                     Sign in
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 14 14"
-                      fill="none"
-                    >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <path
                         d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
                         stroke="currentColor"
