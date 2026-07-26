@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getOrders } from "../../api/storeApi";
+import { toast } from "react-toastify";
+import { getOrders, getVNPayCheckoutUrl } from "../../api/storeApi";
 import { EmptyState } from "../../components/common/EmptyState";
 import { Loading } from "../../components/common/Loading";
 import type { Order } from "../../types";
@@ -10,6 +11,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [payingOrderId, setPayingOrderId] = useState<number | null>(null);
 
   useEffect(() => {
     getOrders()
@@ -17,6 +19,23 @@ export default function Orders() {
       .catch(() => setError("Could not load your order history."))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handlePayNow(orderId: number) {
+    setPayingOrderId(orderId);
+    try {
+      const payUrl = await getVNPayCheckoutUrl(orderId);
+      if (payUrl) {
+        window.location.href = payUrl;
+      } else {
+        toast.error("Could not initiate VNPay payment. Please try again.");
+      }
+    } catch (error) {
+      console.error("VNPay payment error:", error);
+      toast.error("An error occurred while initiating payment.");
+    } finally {
+      setPayingOrderId(null);
+    }
+  }
 
   if (loading) return <main className="page-shell"><Loading label="Loading orders" /></main>;
   if (error) return <main className="page-shell"><EmptyState title="Orders unavailable" description={error} /></main>;
@@ -42,7 +61,32 @@ export default function Orders() {
                 </div>
               ))}
             </div>
-            <footer className="order-card-foot"><span>{order.totalItems} item{order.totalItems === 1 ? "" : "s"}</span><span>{order.status === "PENDING" ? "Your order has been received." : order.status === "PAID" ? "Payment confirmed." : order.status === "SHIPPED" ? "Your order is on its way." : order.status === "DELIVERED" ? "Delivered successfully." : "This order was cancelled."}</span></footer>
+            <footer className="order-card-foot">
+              <span>{order.totalItems} item{order.totalItems === 1 ? "" : "s"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <span>
+                  {order.status === "PENDING"
+                    ? "Your order has been received."
+                    : order.status === "PAID"
+                    ? "Payment confirmed."
+                    : order.status === "SHIPPED"
+                    ? "Your order is on its way."
+                    : order.status === "DELIVERED"
+                    ? "Delivered successfully."
+                    : "This order was cancelled."}
+                </span>
+                {order.status === "PENDING" && (
+                  <button
+                    className="button button-primary"
+                    style={{ minHeight: "32px", padding: "6px 14px", fontSize: "11px" }}
+                    disabled={payingOrderId !== null}
+                    onClick={() => void handlePayNow(order.id)}
+                  >
+                    {payingOrderId === order.id ? "Redirecting…" : "Pay with VNPay"}
+                  </button>
+                )}
+              </div>
+            </footer>
           </article>
         ))}
       </section>

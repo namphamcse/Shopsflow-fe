@@ -358,6 +358,21 @@ export async function getOrders(signal?: AbortSignal) {
   return arrayValue(unwrapData(response.data)).map(normalizeOrder).filter((order) => order.id > 0);
 }
 
+export async function getOrder(id: number, signal?: AbortSignal) {
+  requireEntityId(id, "order");
+  const response = await apiClient.get<unknown>(`/orders/${id}`, { signal });
+  const order = normalizeOrder(unwrapData(response.data));
+  if (order.id <= 0) throw new Error("The backend returned an invalid order.");
+  return order;
+}
+
+export async function getVNPayCheckoutUrl(orderId: number) {
+  requireEntityId(orderId, "order");
+  const response = await apiClient.post<unknown>(`/payment/vnpay/checkout/${orderId}`);
+  const data = record(unwrapData(response.data));
+  return text(data.payUrl);
+}
+
 export async function getAllOrders(signal?: AbortSignal) {
   const response = await apiClient.get<unknown>("/orders/all", { signal });
   return arrayValue(unwrapData(response.data)).map(normalizeOrder).filter((order) => order.id > 0);
