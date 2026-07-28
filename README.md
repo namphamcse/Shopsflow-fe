@@ -54,7 +54,3 @@ npm run preview
 ```
 
 The production files are generated in `dist/` and are intentionally not included in the source ZIP.
-
-## Docker production image
-
-The included `Dockerfile` builds the Vite application and serves it with Nginx. Nginx also proxies `/api` to the Docker service named `backend`, allowing the full project to run as one origin.

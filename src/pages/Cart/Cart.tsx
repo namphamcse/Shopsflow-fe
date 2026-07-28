@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "../../api/client";
-import { placeOrder, removeCartItem, updateCartItem } from "../../api/storeApi";
+import { getVNPayCheckoutUrl, placeOrder, removeCartItem, updateCartItem } from "../../api/storeApi";
 import { EmptyState } from "../../components/common/EmptyState";
 import { Loading } from "../../components/common/Loading";
 import { ProductVisual } from "../../components/common/ProductVisual";
@@ -54,7 +54,21 @@ export default function Cart() {
     try {
       const order = await placeOrder();
       setCart({ items: [], totalItems: 0, totalPrice: 0 });
-      toast.success(`Order #${order.id} placed successfully.`);
+      toast.success(`Order #${order.id} placed successfully. Redirecting to VNPay...`);
+
+      try {
+        const payUrl = await getVNPayCheckoutUrl(order.id);
+        if (payUrl) {
+          window.location.href = payUrl;
+          return;
+        } else {
+          toast.warning("Could not initiate VNPay payment. You can retry from your orders history.");
+        }
+      } catch (payError) {
+        console.error("VNPay checkout error:", payError);
+        toast.warning("Could not initiate VNPay payment. You can retry from your orders history.");
+      }
+
       navigate("/orders");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not place your order."));

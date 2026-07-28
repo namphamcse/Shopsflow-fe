@@ -17,20 +17,14 @@ import { Loading } from "../../components/common/Loading";
 import type { Category, Order, OrderStatus, Product } from "../../types";
 import { formatCurrency, formatDate } from "../../utils/format";
 
-const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ["PAID", "CANCELLED"],
-  PAID: ["SHIPPED", "CANCELLED"],
-  SHIPPED: ["DELIVERED"],
-  DELIVERED: [],
-  CANCELLED: [],
-};
-
-function statusOptions(status: OrderStatus) {
-  return [status, ...nextStatuses[status]];
-}
+const statuses: OrderStatus[] = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
 type Tab = "products" | "categories" | "orders";
 type ProductForm = { name: string; description: string; price: string; imageUrl: string; stockQuantity: string; categoryIds: number[] };
 const blankProduct: ProductForm = { name: "", description: "", price: "", imageUrl: "", stockQuantity: "0", categoryIds: [] };
+type CloudinaryUploadResponse = {
+  secure_url?: unknown;
+  error?: { message?: unknown };
+};
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("products");
@@ -43,7 +37,7 @@ export default function Admin() {
   const [categoryName, setCategoryName] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,6 +108,61 @@ export default function Admin() {
   function resetProductForm() {
     setEditingProductId(null);
     setForm(blankProduct);
+  }
+
+  async function uploadProductImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Choose an image smaller than 10 MB.");
+      return;
+    }
+
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      toast.error("Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET first.");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("upload_preset", uploadPreset);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body,
+      });
+      const result = await response.json() as CloudinaryUploadResponse;
+
+      if (!response.ok) {
+        const message = typeof result.error?.message === "string" && result.error.message.trim()
+          ? result.error.message
+          : "Could not upload the image.";
+        throw new Error(message);
+      }
+
+      if (typeof result.secure_url !== "string" || !result.secure_url.trim()) {
+        throw new Error("Cloudinary did not return an image URL.");
+      }
+
+      setForm((current) => ({ ...current, imageUrl: result.secure_url as string }));
+      toast.success("Image uploaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not upload the image.");
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
@@ -197,27 +246,12 @@ export default function Admin() {
   }
 
   async function changeOrderStatus(orderId: number, status: OrderStatus) {
-    const currentOrder = orders.find((order) => order.id === orderId);
-    if (!currentOrder || currentOrder.status === status) return;
-
-    setUpdatingOrderId(orderId);
     try {
       const updated = await updateOrderStatus(orderId, status);
       setOrders((current) => current.map((order) => order.id === orderId ? updated : order));
-
-      if (status === "CANCELLED") {
-        try {
-          setProducts(await getAllProducts({ sort: "createdAt,desc" }));
-        } catch {
-          toast.warn("Order cancelled, but inventory could not be refreshed automatically.");
-        }
-      }
-
       toast.success(`Order #${orderId} moved to ${status}.`);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not update the order."));
-    } finally {
-      setUpdatingOrderId(null);
     }
   }
 
@@ -244,9 +278,19 @@ export default function Admin() {
             <label className="form-field"><span>Name</span><input value={form.name} maxLength={150} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
             <label className="form-field"><span>Description</span><textarea rows={5} maxLength={2000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
             <div className="form-grid-two"><label className="form-field"><span>Price (USD)</span><input type="number" min="0.01" step="0.01" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} /></label><label className="form-field"><span>Stock</span><input type="number" min="0" step="1" value={form.stockQuantity} onChange={(event) => setForm({ ...form, stockQuantity: event.target.value })} /></label></div>
-            <label className="form-field"><span>Image URL</span><input type="url" value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} placeholder="https://…" /></label>
+            <div className="form-field image-upload-field">
+              <span>Product image</span>
+              <div className="image-upload-preview">
+                {form.imageUrl ? <img src={form.imageUrl} alt={form.name ? `${form.name} preview` : "Product preview"} /> : <small>No image uploaded</small>}
+              </div>
+              <label className={`button button-secondary button-full upload-button${saving || uploadingImage ? " is-disabled" : ""}`}>
+                <input type="file" accept="image/*" disabled={saving || uploadingImage} onChange={(event) => void uploadProductImage(event)} />
+                {uploadingImage ? "Uploading..." : form.imageUrl ? "Replace image" : "Upload image"}
+              </label>
+              {form.imageUrl && <button type="button" className="text-button" disabled={saving || uploadingImage} onClick={() => setForm({ ...form, imageUrl: "" })}>Remove image</button>}
+            </div>
             <fieldset className="category-checks"><legend>Categories</legend>{categories.map((category) => <label key={category.id}><input type="checkbox" checked={form.categoryIds.includes(category.id)} onChange={(event) => setForm({ ...form, categoryIds: event.target.checked ? [...form.categoryIds, category.id] : form.categoryIds.filter((id) => id !== category.id) })} /><span>{category.name}</span></label>)}</fieldset>
-            <button className="button button-primary button-full" disabled={saving}>{saving ? "Saving…" : editingProductId ? "Update product" : "Create product"}</button>
+            <button className="button button-primary button-full" disabled={saving || uploadingImage}>{saving ? "Saving…" : editingProductId ? "Update product" : "Create product"}</button>
           </form>
           <section className="admin-table-card">
             <div className="admin-card-head"><h2>Inventory</h2><span>{products.length} products</span></div>
@@ -263,38 +307,7 @@ export default function Admin() {
       )}
 
       {tab === "orders" && (
-        <section className="admin-table-card">
-          <div className="admin-card-head"><h2>All orders</h2><span>{orders.length} total</span></div>
-          {orders.length === 0 ? (
-            <div className="inline-notice admin-empty">No orders yet. Sign in as a customer, add products to the cart and place an order.</div>
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead><tr><th>Order</th><th>Customer</th><th>Placed</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
-                <tbody>{orders.map((order) => (
-                  <tr key={order.id}>
-                    <td><strong>#{order.id}</strong></td>
-                    <td><strong>{order.userName || "Customer"}</strong><small>{order.userEmail || `User #${order.userId || "—"}`}</small></td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>{order.totalItems}</td>
-                    <td>{formatCurrency(order.totalAmount)}</td>
-                    <td>
-                      <select
-                        className={`status-select status-${order.status.toLowerCase()}`}
-                        value={order.status}
-                        disabled={updatingOrderId === order.id || nextStatuses[order.status].length === 0}
-                        onChange={(event) => void changeOrderStatus(order.id, event.target.value as OrderStatus)}
-                        aria-label={`Status for order ${order.id}`}
-                      >
-                        {statusOptions(order.status).map((status) => <option key={status} value={status}>{status}</option>)}
-                      </select>
-                    </td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <section className="admin-table-card"><div className="admin-card-head"><h2>All orders</h2><span>{orders.length} total</span></div><div className="table-scroll"><table><thead><tr><th>Order</th><th>Placed</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><strong>#{order.id}</strong></td><td>{formatDate(order.createdAt)}</td><td>{order.totalItems}</td><td>{formatCurrency(order.totalAmount)}</td><td><select className={`status-select status-${order.status.toLowerCase()}`} value={order.status} onChange={(event) => void changeOrderStatus(order.id, event.target.value as OrderStatus)}>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></td></tr>)}</tbody></table></div></section>
       )}
     </main>
   );

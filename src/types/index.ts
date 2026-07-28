@@ -81,9 +81,6 @@ export type Order = {
   totalAmount: number;
   totalItems: number;
   createdAt: string;
-  userId: number | null;
-  userName: string | null;
-  userEmail: string | null;
   items: OrderItem[];
 };
 

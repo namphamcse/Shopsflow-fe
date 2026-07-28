@@ -8,6 +8,7 @@ import Catalog from "./pages/Catalog/Catalog";
 import ProductDetail from "./pages/ProductDetail/ProductDetail";
 import Cart from "./pages/Cart/Cart";
 import Orders from "./pages/Orders/Orders";
+import PaymentResult from "./pages/PaymentResult/PaymentResult";
 import Admin from "./pages/Admin/Admin";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
@@ -26,6 +27,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/cart" element={<Cart />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/payment-result" element={<PaymentResult />} />
           </Route>
 
           <Route element={<ProtectedRoute role="ADMIN" />}>
