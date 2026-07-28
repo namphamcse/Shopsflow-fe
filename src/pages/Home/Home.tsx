@@ -61,7 +61,7 @@ export function Home() {
         <div className="home-hero-copy">
           <p className="section-kicker">Independent electronics catalogue / 2026</p>
           <h1>
-            Objects for a more <em>intentional</em> desk.
+            Tools that <em>earn their place</em> on your desk.
           </h1>
           <p className="hero-lead">
             A focused selection of audio, input, lighting and studio tools—chosen for how they work, feel and age.
@@ -154,7 +154,7 @@ export function Home() {
 
       <section className="editorial-panel">
         <p className="section-kicker">The Shopsflow standard</p>
-        <blockquote>“Buy fewer objects. Expect more from every one.”</blockquote>
+        <blockquote>“Choose the tools you will rely on, repair, and keep—not the ones you will replace next season.”</blockquote>
         <div className="editorial-grid">
           <p>We prioritize repairable products, useful specifications and honest availability.</p>
           <p>No fake urgency. No inflated discount language. Just a clean path from discovery to delivery.</p>
